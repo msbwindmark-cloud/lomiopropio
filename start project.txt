@@ -7,6 +7,14 @@ git remote add origin https://github.com/msbwindmark-cloud/lomiopropio.git
 git push -u origin main
 
 
+python3 -m venv venv
+
+source venv/bin/activate
+
+keras==3.14.1
+
+
+
 pip cache purge
 
 du -sh * | sort -h
