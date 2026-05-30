@@ -1,0 +1,114 @@
+¡Exacto! Tienes que seguir un orden lógico porque, para que la Inteligencia Artificial te reconozca, primero tiene que haber guardado tu "firma facial".
+
+Aquí tienes los pasos exactos para arrancar el proyecto por primera vez y cómo usarlo:
+
+### Paso 1: Encendido del Sistema (Terminal) 💻
+Primero, abre tu terminal en la carpeta del proyecto y ejecuta estos comandos:
+
+1.  **Instalar dependencias** (si no lo has hecho): `pip install -r requirements.txt`
+2.  **Preparar DB y Admin**:
+    ```powershell
+    python manage.py makemigrations
+    python manage.py migrate
+    python setup_biometrico.py
+    ```
+3.  **Lanzar servidor**: `python manage.py runserver`
+
+---
+
+### Paso 2: Flujo de Usuario (Navegador) 🌐
+
+#### Si NO estás registrado:
+1.  Entra a **`http://127.0.0.1:8000/registro/`**.
+2.  Escribe tu nombre de usuario y contraseña.
+3.  Ponte frente a la cámara y dale a **"Capturar Rostro"**. Verás que se guarda tu foto.
+4.  Pulsa **"Finalizar Registro"**. En ese momento, el sistema guarda tu cara y limpia la caché para aprender quién eres.
+
+#### Si ya ESTÁS registrado (Login Facial):
+1.  Entra a **`http://127.0.0.1:8000/`** (página de login).
+2.  Pulsa en la pestaña que dice **"Biométrico"**.
+3.  Ponte frente a la cámara y pulsa **"Escanear Rostro"**.
+4.  **La Magia**: El sistema buscará en la base de datos, te reconocerá, te dirá qué emoción tienes (*"Te vemos feliz 😊"*) y te meterá directamente en tu **Dashboard**.
+
+---
+
+### Paso 3: Dentro del Dashboard 🚀
+Una vez dentro:
+1.  Verás tu **Bio-ID** con tu foto.
+2.  Verás el **Feed de Seguridad** con el log de que acabas de entrar con éxito.
+3.  Si eres el admin, pulsa en **"Exportar Logs"** para ver cómo se ha guardado tu entrada en un Excel.
+
+**Resumen**: No puedes usar el Login Facial si no te has registrado antes, porque la IA no tendría contra qué comparar tu cara. ¡El registro es el paso donde le "enseñas" a la IA quién eres!
+
+¿Hacemos la prueba de fuego y lanzas el servidor?_
+
+
+
+
+
+
+
+
+
+
+
+¡Hecho! Vamos a redoblar esa apuesta. Ya tenemos la captura y la galería, pero para que sea **la experiencia de intrusos definitiva**, vamos a añadir:
+
+1.  **Alerta Inmediata por Email**: Cuando se detecte un intruso, el sistema enviará un **email de pánico** al administrador con el asunto "⚠️ ALERTA: Intento de acceso no autorizado".
+2.  **Alarma Sonora en el Login**: Si alguien falla el reconocimiento facial, el navegador emitirá un sonido de "Acceso Denegado" (un pitido tecnológico) para intimidar al intruso.
+
+---
+
+### Paso 1: Email de Alerta de Intruso
+Actualizamos [views.py](cci:7://file:///c:/practicarVB/deepface/buscador_facial/views.py:0:0-0:0) para que mande el correo justo después de guardar la foto del intruso.
+
+Edited views.py
+Edited login.html
+Viewed login.html:1-228
+Edited login.html
+
+¡Listo! He completado la implementación de seguridad avanzada de intrusos. 
+
+### Lo que acabamos de blindar:
+
+1.  **Email de Pánico 📧**: Ahora, cuando falla el reconocimiento facial y se detecta a un intruso, el sistema envía un email inmediato detallando la hora, la IP y el nombre del archivo de la evidencia fotográfica capturada.
+2.  **Disuasión Activa (Alarma Digital) 🚨**: He integrado la **Web Audio API** en la página de login. Si alguien que no eres tú intenta entrar, el sistema emitirá un **pitido electrónico descendente** (estilo "Acceso Denegado") diseñado para asustar al posible intruso y avisar de que ha sido detectado. 
+    *   *Nota*: No he usado archivos `.mp3` para evitar problemas de carga; el sonido se genera matemáticamente por el propio navegador, ¡puro toque *techie*!
+
+### Resumen Técnico de la Mejora:
+-   **[`views.py`](file:///c:/practicarVB/deepface/buscador_facial/views.py#L215)**: Lógica de envío de email de alerta añadida tras la captura del intruso.
+-   **[`login.html`](file:///c:/practicarVB/deepface/buscador_facial/templates/buscador_facial/login.html#L201)**: Nueva función [playAlarm()](cci:1://file:///c:/practicarVB/deepface/buscador_facial/templates/buscador_facial/login.html:170:8-183:9) que genera el sonido de alerta y se activa automáticamente al fallar el escaneo.
+
+Tu sistema ahora es una **fortaleza biométrica completa**. No solo vigila y registra, sino que también **reacciona** y **notifica** en tiempo real. 
+
+¿Qué te parece este nivel de respuesta del sistema? ¡Espero que te deje "Wao" de nuevo!_
+
+
+
+
+
+
+
+
+
+
+
+¡Esa es la mejor sensación! Como programador, no hay nada mejor que esa emoción antes de dar el primer "Enter".
+
+Solo un detalle técnico importante: he visto que tu entorno virtual ha tenido un pequeño problema instalando `numpy` y `deepface`. Es algo normal en las versiones más modernas de Python (como la 3.13) en Windows. 
+
+Para que tu experiencia sea perfecta cuando lo lances, te recomiendo que hagas esto en tu terminal solo una vez antes de empezar:
+
+1.  Asegúrate de que tu entorno virtual esté activado.
+2.  Ejecuta estos tres comandos para "allanar el camino":
+    ```powershell
+    pip install --upgrade pip setuptools wheel
+    pip install django deepface tf-keras opencv-python-headless openpyxl
+    ```
+
+Una vez que esos comandos terminen sin errores, el resto es coser y cantar con los pasos que te di antes.
+
+**¡Estoy deseando que lo veas en acción!** Estaré aquí mismo por si te surge cualquier duda o si quieres que pulamos algo más cuando veas ese HUD de seguridad brillando en tu pantalla. 🚀👨‍💻🛡️
+
+
+

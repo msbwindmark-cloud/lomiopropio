@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control de Acceso Facial</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+        }
+        body { 
+            background-color: var(--bg); 
+            color: var(--text); 
+            font-family: 'Inter', system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .contenedor { 
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%;
+            max-width: 700px;
+        }
+        h1 { margin-bottom: 1.5rem; font-weight: 700; color: var(--primary); }
+        video { 
+            border: 4px solid var(--primary); 
+            border-radius: 12px; 
+            background-color: #000; 
+            width: 100%;
+            max-width: 640px;
+            transform: scaleX(-1); /* Espejo */
+        }
+        button { 
+            margin-top: 2rem; 
+            padding: 0.75rem 2rem; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        #resultado { 
+            margin-top: 1.5rem; 
+            font-weight: 600; 
+            font-size: 1.2rem; 
+            padding: 1rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            text-align: center;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="contenedor">
+    <h1>Acceso Facial Biométrico</h1>
+    <video id="webcam" width="640" height="480" autoplay playsinline></video>
+    <button id="btn-identificar">Identificar Rostro</button>
+    <div id="resultado">Esperando captura...</div>
+</div>
+
+<script>
+    const video = document.getElementById('webcam');
+    const boton = document.getElementById('btn-identificar');
+    const resultadoDiv = document.getElementById('resultado');
+
+    // Solicitar acceso a la cámara del usuario
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { 
+            resultadoDiv.innerText = "Error al acceder a la cámara: " + err;
+            resultadoDiv.style.color = "#ef4444";
+        });
+
+    boton.addEventListener('click', () => {
+        resultadoDiv.innerHTML = '<div class="loader"></div> Procesando...';
+        resultadoDiv.style.color = "var(--text)";
+        
+        // Crear un lienzo oculto para capturar el fotograma actual
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convertir el lienzo a un archivo binario (Blob) tipo JPEG
+        canvas.toBlob((blob) => {
+            const formData = new FormData();
+            formData.append('imagen_camara', blob, 'captura.jpg');
+
+            // Enviar el archivo al backend de Django
+            fetch('/reconocer/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken') 
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    resultadoDiv.innerHTML = `<span style="color: #10b981;">✅ Acceso concedido: ${data.usuario}</span><br><small style="font-size: 0.8rem; font-weight: normal;">Distancia: ${data.distancia}</small>`;
+                } else {
+                    resultadoDiv.innerHTML = `<span style="color: #ef4444;">❌ Acceso denegado: ${data.message}</span>`;
+                }
+            })
+            .catch(err => { 
+                resultadoDiv.innerText = "Error en la comunicación con el servidor."; 
+                resultadoDiv.style.color = "#ef4444";
+            });
+        }, 'image/jpeg', 0.9);
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+{% extends 'buscador_facial/base.html' %}
+
+{% block title %}Acceso Biométrico | Secure System{% endblock %}
+
+{% block extra_css %}
+    body {
+        background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .login-container {
+        width: 100%;
+        max-width: 450px;
+        padding: 2.5rem;
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.5rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        position: relative;
+        z-index: 10;
+    }
+
+    .logo {
+        width: 60px; height: 60px;
+        background: var(--primary);
+        border-radius: 1rem;
+        margin: 0 auto 1.5rem;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem;
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+
+    h1 { font-size: 1.75rem; margin-bottom: 0.5rem; font-weight: 700; }
+    p.subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
+
+    .auth-method-toggle {
+        display: flex;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.25rem;
+        border-radius: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .toggle-btn {
+        flex: 1; padding: 0.6rem; border: none; background: transparent;
+        color: var(--text-muted); cursor: pointer; border-radius: 0.5rem;
+        font-weight: 600; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toggle-btn.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .input-group { text-align: left; margin-bottom: 1.25rem; }
+    label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+    input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem;
+        color: white; outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--primary); }
+
+    /* Facial Recognition UI */
+    #facial-auth { display: none; }
+    .camera-box {
+        position: relative; width: 100%; aspect-ratio: 4/3;
+        background: #000; border-radius: 1rem; overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.1); margin-bottom: 1.5rem;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    .scanning-line {
+        position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+        background: var(--primary); box-shadow: 0 0 15px var(--primary);
+        animation: scan 2s linear infinite; display: none;
+    }
+    @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+    #status-msg { margin-top: 1rem; font-size: 0.9rem; min-height: 1.2rem; }
+{% endblock %}
+
+{% block content %}
+    <div class="login-container">
+        <div class="logo">👤</div>
+        <h1>Bienvenido</h1>
+        <p class="subtitle">Accede de forma segura y rápida</p>
+
+        <div class="auth-method-toggle">
+            <button class="toggle-btn active" id="btn-show-pass">Contraseña</button>
+            <button class="toggle-btn" id="btn-show-face">Biométrico</button>
+        </div>
+
+        <form id="pass-auth" method="POST">
+            {% csrf_token %}
+            <div class="input-group">
+                <label>Usuario</label>
+                <input type="text" name="username" placeholder="Tu nombre de usuario" required>
+            </div>
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Iniciar Sesión</button>
+        </form>
+
+        <div id="facial-auth">
+            <div class="camera-box">
+                <video id="webcam" autoplay playsinline></video>
+                <div class="scanning-line" id="scanner"></div>
+            </div>
+            <button class="btn btn-primary" id="btn-scan" style="width: 100%;">Escanear Rostro</button>
+        </div>
+
+        <div id="status-msg"></div>
+        <p style="margin-top: 2rem; font-size: 0.85rem; color: var(--text-muted);">
+            ¿No tienes cuenta? <a href="{% url 'register' %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">Regístrate aquí</a>
+        </p>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        const btnPass = document.getElementById('btn-show-pass');
+        const btnFace = document.getElementById('btn-show-face');
+        const formPass = document.getElementById('pass-auth');
+        const sectionFace = document.getElementById('facial-auth');
+        const video = document.getElementById('webcam');
+        const scanner = document.getElementById('scanner');
+        const statusMsg = document.getElementById('status-msg');
+        const btnScan = document.getElementById('btn-scan');
+
+        btnPass.onclick = () => {
+            btnPass.classList.add('active'); btnFace.classList.remove('active');
+            formPass.style.display = 'block'; sectionFace.style.display = 'none';
+            stopCamera();
+        };
+
+        btnFace.onclick = () => {
+            btnFace.classList.add('active'); btnPass.classList.remove('active');
+            formPass.style.display = 'none'; sectionFace.style.display = 'block';
+            startCamera();
+        };
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => { video.srcObject = stream; })
+                .catch(err => { 
+                    Swal.fire({
+                        icon: 'error', title: 'Error de Cámara',
+                        text: 'No se pudo acceder a la webcam.',
+                        background: '#1e293b', color: '#f8fafc'
+                    });
+                });
+        }
+
+        function stopCamera() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        function playAlarm() {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, context.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, context.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.1, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(context.destination);
+            osc.start();
+            osc.stop(context.currentTime + 0.5);
+        }
+
+        btnScan.onclick = () => {
+            statusMsg.innerText = "Preparando escaneo...";
+            scanner.style.display = "block";
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob((blob) => {
+                const formData = new FormData();
+                formData.append('imagen_camara', blob, 'identidad.jpg');
+
+                fetch('/reconocer/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    scanner.style.display = "none";
+                    statusMsg.innerText = "";
+                    if (data.status === 'success') {
+                        let msg = `¡Bienvenido, ${data.usuario}!`;
+                        if (data.analisis && data.analisis.emocion) {
+                            msg += ` Te vemos ${data.analisis.emocion === 'happy' ? 'feliz 😊' : 'genial'}.`;
+                        }
+                        Toast.fire({ icon: 'success', title: msg });
+                        setTimeout(() => window.location.href = data.redirect || '/', 1500);
+                    } else {
+                        playAlarm();
+                        Toast.fire({ icon: 'error', title: data.message });
+                    }
+                })
+                .catch(err => {
+                    scanner.style.display = "none";
+                    Toast.fire({ icon: 'error', title: 'Error de conexión' });
+                });
+            }, 'image/jpeg', 0.9);
+        };
+    </script>
+{% endblock %}

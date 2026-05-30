@@ -1,0 +1,164 @@
+{% extends 'buscador_facial/base.html' %}
+
+{% block title %}Mi Perfil | Secure System{% endblock %}
+
+{% block extra_css %}
+    body { display: flex; }
+    .sidebar {
+        width: 260px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05); padding: 2rem;
+        display: flex; flex-direction: column; position: fixed; height: 100vh;
+    }
+    .main-content { margin-left: 260px; flex: 1; padding: 2.5rem; display: flex; justify-content: center; }
+    
+    .profile-card {
+        width: 100%; max-width: 800px; background: var(--card-bg);
+        border-radius: 1.5rem; display: grid; grid-template-columns: 1fr 1.2fr;
+        overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        height: min-content;
+    }
+
+    .form-side { padding: 2.5rem; }
+    .camera-side { 
+        background: rgba(0, 0, 0, 0.2); padding: 2.5rem;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+
+    .preview-box {
+        width: 100%; aspect-ratio: 1/1; background: #000;
+        border-radius: 1rem; overflow: hidden; margin-bottom: 1rem;
+        border: 2px solid var(--primary); position: relative;
+    }
+    video, canvas, .current-photo { width: 100%; height: 100%; object-fit: cover; }
+    video, canvas { transform: scaleX(-1); }
+    #video-feed, #photo-canvas { display: none; }
+
+    .input-group { margin-bottom: 1.2rem; }
+    label { display: block; margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--text-muted); }
+    input {
+        width: 100%; padding: 0.75rem 1rem;
+        background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem; color: white; outline: none;
+    }
+    .btn-logout { margin-top: auto; color: #ef4444; text-decoration: none; font-weight: 600; padding: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+{% endblock %}
+
+{% block content %}
+    <div class="sidebar">
+        <div style="margin-bottom: 3rem; font-weight: 700; font-size: 1.2rem; color: var(--primary);">SECURE.AI</div>
+        <nav>
+            <a href="{% url 'dashboard' %}" class="nav-link"><span>📊</span> Dashboard</a>
+            <a href="{% url 'profile' %}" class="nav-link active"><span>👤</span> Mi Perfil</a>
+            <a href="#" class="nav-link"><span>🛡️</span> Security</a>
+            {% if user.is_superuser %}
+            <a href="/admin/" class="nav-link" target="_blank" style="color: var(--accent);"><span>⚙️</span> Panel Administrador</a>
+            {% endif %}
+        </nav>
+        <a href="{% url 'logout' %}" class="btn-logout"><span>🚪</span> Cerrar Sesión</a>
+    </div>
+
+    <div class="main-content">
+        <div class="profile-card">
+            <div class="form-side">
+                <h2 style="margin-bottom: 0.5rem;">Editar Perfil</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 2rem;">Actualiza tus credenciales o tu firma biométrica.</p>
+                
+                <form id="profile-form">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <label>Nombre de Usuario</label>
+                        <input type="text" name="username" value="{{ user.username }}" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Nueva Contraseña (dejar en blanco para no cambiar)</label>
+                        <input type="password" name="password" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Cambios</button>
+                </form>
+            </div>
+
+            <div class="camera-side">
+                <p style="font-size: 0.85rem; margin-bottom: 1rem; font-weight: 600;">Firma Biométrica</p>
+                <div class="preview-box">
+                    <img src="{{ photo_url }}" id="current-img" class="current-photo" alt="Actual">
+                    <video id="video-feed" autoplay playsinline></video>
+                    <canvas id="photo-canvas"></canvas>
+                </div>
+                <button class="btn btn-accent" id="btn-mode" style="width: 100%;">Actualizar Foto</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        const btnMode = document.getElementById('btn-mode');
+        const video = document.getElementById('video-feed');
+        const canvas = document.getElementById('photo-canvas');
+        const currentImg = document.getElementById('current-img');
+        const form = document.getElementById('profile-form');
+
+        let isCameraActive = false;
+        let capturedBlob = null;
+
+        btnMode.onclick = () => {
+            if (!isCameraActive) {
+                // Activar cámara
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        video.style.display = 'block';
+                        currentImg.style.display = 'none';
+                        canvas.style.display = 'none';
+                        btnMode.innerText = "Capturar Nueva Foto";
+                        isCameraActive = true;
+                    });
+            } else {
+                // Capturar
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                canvas.toBlob((blob) => {
+                    capturedBlob = blob;
+                    video.style.display = 'none';
+                    canvas.style.display = 'block';
+                    btnMode.innerText = "Recapturar o Cancelar";
+                    isCameraActive = false;
+                    // Detener tracks
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                    Toast.fire({ icon: 'success', title: 'Nueva foto lista' });
+                }, 'image/jpeg', 0.95);
+            }
+        };
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            if (capturedBlob) {
+                formData.append('rostro', capturedBlob, 'nuevo_rostro.jpg');
+            }
+
+            fetch('{% url "profile" %}', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success', title: 'Actualizado',
+                        text: data.message, background: '#1e293b', color: '#f8fafc'
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire({
+                        icon: 'error', title: 'Error', text: data.message,
+                        background: '#1e293b', color: '#f8fafc'
+                    });
+                }
+            });
+        };
+    </script>
+{% endblock %}

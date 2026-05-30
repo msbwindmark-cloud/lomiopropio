@@ -1,0 +1,206 @@
+{% extends 'buscador_facial/base.html' %}
+
+{% block title %}Dashboard | Sistema Biométrico Pro{% endblock %}
+
+{% block extra_css %}
+    body { display: flex; overflow-x: hidden; }
+    .sidebar {
+        width: 260px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px);
+        border-right: 1px solid rgba(99, 102, 241, 0.2); padding: 2rem;
+        display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100;
+    }
+    .main-content { margin-left: 260px; flex: 1; padding: 2.5rem; background: radial-gradient(circle at top right, #1e1b4b, #0f172a); min-height: 100vh; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
+
+    /* Security Feed Style */
+    .security-feed {
+        background: rgba(0, 0, 0, 0.4); border-radius: 1rem; padding: 1rem;
+        border: 1px solid rgba(99, 102, 241, 0.3); font-family: 'Courier New', Courier, monospace;
+        font-size: 0.85rem; height: 300px; overflow-y: auto;
+    }
+    .feed-item {
+        border-left: 2px solid var(--primary); padding-left: 1rem; margin-bottom: 0.75rem;
+        animation: fadeIn 0.5s ease-out;
+    }
+    .feed-time { color: var(--primary); font-weight: bold; }
+    .feed-action { color: var(--accent); }
+
+    /* Biometric Card HUD */
+    .hud-card {
+        background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem;
+        padding: 2rem; position: relative; overflow: hidden;
+    }
+    .hud-card::before {
+        content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: conic-gradient(transparent, var(--primary), transparent 30%);
+        animation: rotate 10s linear infinite; opacity: 0.1; pointer-events: none;
+    }
+    @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+    .facial-signature-box {
+        display: flex; gap: 1.5rem; align-items: center;
+    }
+    .bio-photo {
+        width: 150px; height: 150px; border-radius: 1rem; border: 2px solid var(--primary);
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); object-fit: cover;
+    }
+    .dna-line {
+        height: 4px; background: var(--primary); margin: 2px 0;
+        box-shadow: 0 0 5px var(--primary); animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+    .grid-dashboard { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    .card-pro { background: rgba(30, 41, 59, 0.5); border-radius: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.5rem; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+    
+    .status-online { display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; margin-right: 5px; }
+{% endblock %}
+
+{% block content %}
+    <div class="sidebar">
+        <div style="margin-bottom: 3rem; font-weight: 700; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">🛡️</span> SECURE.AI
+        </div>
+        <nav>
+            <a href="{% url 'dashboard' %}" class="nav-link active"><span>📊</span> Dashboard</a>
+            <a href="{% url 'profile' %}" class="nav-link"><span>👤</span> Mi Perfil</a>
+            <a href="#" class="nav-link"><span>🛡️</span> Security HUD</a>
+            {% if user.is_superuser %}
+            <a href="/admin/" class="nav-link" target="_blank" style="color: var(--accent);"><span>⚙️</span> Admin Panel</a>
+            {% endif %}
+        </nav>
+        <a href="{% url 'logout' %}" class="btn-logout" id="btn-logout-trigger"><span>🚪</span> Cerrar Sesión</a>
+    </div>
+    
+    <div class="main-content">
+        <header>
+            <div>
+                <h1 style="font-size: 2.2rem; font-weight: 700;">Biometric Command Center</h1>
+                <p style="color: var(--text-muted);"><span class="status-online"></span> Sistema Operativo - {{ user.username|upper }}</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                {% if user.is_superuser %}
+                <a href="{% url 'export_logs' %}" class="btn btn-accent" style="font-size: 0.85rem; padding: 0.6rem 1rem;">⬇️ EXPORTAR AUDITORÍA</a>
+                {% endif %}
+                <div style="background: rgba(255,255,255,0.05); padding: 0.5rem 1.2rem; border-radius: 2rem; border: 1px solid rgba(255,255,255,0.1);">
+                    {{ user.username }}
+                </div>
+            </div>
+        </header>
+
+        <div class="hud-card" style="margin-bottom: 2rem;">
+            <div class="facial-signature-box">
+                {% if user_photo %}
+                    <img src="{{ user_photo }}" class="bio-photo" alt="Bio ID">
+                {% else %}
+                    <div class="bio-photo" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; background: #000;">👤</div>
+                {% endif %}
+                <div style="flex: 1;">
+                    <h3 style="color: var(--primary); letter-spacing: 2px;">FIRMA DIGITAL DE IDENTIDAD</h3>
+                    <div style="margin: 1rem 0;">
+                        {% for i in "12345678" %}
+                            <div class="dna-line" style="width: {% widthratio i 1 12 %}%; opacity: 0.{{ i }};"></div>
+                        {% endfor %}
+                    </div>
+                    <div style="display: flex; gap: 2rem; font-size: 0.8rem; color: var(--text-muted);">
+                        <div>STATUS: <span style="color: white; font-weight: bold;">VERIFIED</span></div>
+                        <div>MOOD: <span style="color: var(--accent); font-weight: bold;">{{ ultimo_login.descripcion|slice:"-10:-1"|default:"GENIAL"|upper }}</span></div>
+                        <div>LEVEL: <span style="color: var(--primary); font-weight: bold;">ENCRYPTED</span></div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: rgba(255,255,255,0.1);">00{{ user.id }}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted);">USER SERIAL ID</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-dashboard">
+            <div class="card-pro">
+                <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: var(--primary);">📡</span> LIVE SECURITY FEED
+                </h3>
+                <div class="security-feed" id="log-feed">
+                    {% for log in logs %}
+                        <div class="feed-item">
+                            <span class="feed-time">[{{ log.fecha_hora|date:"H:i:s" }}]</span>
+                            <span class="feed-action">{{ log.accion }}</span>: {{ log.descripcion }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card-pro">
+                <h3 style="margin-bottom: 1.5rem;">ANÁLISIS DE SESIÓN</h3>
+                <div style="text-align: center; padding: 1rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">
+                        {% if "happy" in ultimo_login.descripcion %}😊{% else %}👤{% endif %}
+                    </div>
+                    <h4 style="color: var(--primary);">Estado Emocional</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+                        Detectado durante el último acceso biométrico exitoso.
+                    </p>
+                    
+                    <div style="margin-top: 2rem; text-align: left;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px;">RELIABILITY</div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px;">
+                            <div style="width: 98%; height: 100%; background: var(--accent); border-radius: 3px; box-shadow: 0 0 10px var(--accent);"></div>
+                        </div>
+                    </div>
+                </div>
+            <div class="card-pro">
+                <h3 style="margin-bottom: 1.5rem; color: #ef4444;">⚠️ INTRUSION ALERTS</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
+                    {% for intruso in intrusos %}
+                        <div style="position: relative;">
+                            <img src="{{ intruso.url }}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 0.5rem; border: 1px solid #ef4444;">
+                            <div style="position: absolute; bottom: 0; background: rgba(239, 68, 68, 0.8); color: white; font-size: 0.5rem; width: 100%; text-align: center; border-radius: 0 0 0.5rem 0.5rem;">
+                                UNKNOWN
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p style="color: var(--text-muted); font-size: 0.8rem; grid-column: 1/-1; text-align: center; padding: 1rem;">
+                            No se han detectado amenazas recientes en el perímetro.
+                        </p>
+                    {% endfor %}
+                </div>
+                <p style="font-size: 0.7rem; color: #ef4444; margin-top: 1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+                    Monitor de amenazas activo en tiempo real
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        const btnLogout = document.getElementById('btn-logout-trigger');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', (e) => {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'TERMINAR SESIÓN',
+                    text: "¿Confirmar desconexión del terminal biométrico?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#6366f1',
+                    cancelButtonColor: '#1e293b',
+                    confirmButtonText: 'DESCONECTAR',
+                    cancelButtonText: 'CANCELAR',
+                    background: '#0f172a',
+                    color: '#f8fafc'
+                }).then((result) => {
+                    if (result.isConfirmed) { window.location.href = "{% url 'logout' %}"; }
+                });
+            });
+        }
+
+        // Efecto autoscroll en el feed
+        const feed = document.getElementById('log-feed');
+        feed.scrollTop = feed.scrollHeight;
+    </script>
+{% endblock %}
