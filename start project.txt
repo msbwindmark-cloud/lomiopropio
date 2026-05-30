@@ -13,6 +13,13 @@ source venv/bin/activate
 
 keras==3.14.1
 
+TMPDIR=~ pip install --no-cache-dir -r requirements.txt
+
+TMPDIR=~ pip install --no-cache-dir --no-deps -r requirements.txt
+
+
+pandas==3.0.3
+
 
 
 pip cache purge
